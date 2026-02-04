@@ -1,0 +1,7 @@
+{
+  "api_key": "your_api_key_here",
+  "api_endpoint": "https://open.bigmodel.cn/api/paas/v4/layout_parsing",
+  "model_name": "glm-ocr",
+  "max_concurrency": 10
+}
+

@@ -1,0 +1,29 @@
+# 配置文件 (包含私密的 API Key)
+config.json
+
+# OCR 处理产生的临时缓存目录 (格式如 .文件名_cache)
+.*_cache/
+
+# OCR 生成的最终 Markdown 结果文件
+*_ocr_result.md
+
+# Python 产生的二进制文件与缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 虚拟环境 (如果本地创建了的话)
+.venv/
+env/
+venv/
+ENV/
+
+# 操作系统临时文件 (macOS)
+.DS_Store
+Thumbs.db
+
+# 临时上传或测试用的 PDF/图片 (可选，如果你不希望同步测试样本)
+# *.pdf
+# *.png
+# *.jpg
+# *.jpeg
