@@ -25,10 +25,14 @@ import fitz  # PyMuPDF
 import re
 
 def load_config() -> dict:
-    """从 config.json 加载配置"""
-    config_path = Path(__file__).parent / "config.json"
+    """从 Skill 根目录（脚本所在的父目录）加载 config.json"""
+    # 严格遵循设计：配置文件必须位于脚本目录的上一级（即 Skill 根目录）
+    # 使用相对于脚本文件的定位，确保在任何工作目录下运行都能找到正确的配置文件
+    config_path = Path(__file__).parent.parent / "config.json"
+    
     if not config_path.exists():
-        raise FileNotFoundError(f"配置文件不存在: {config_path}")
+        raise FileNotFoundError(f"配置文件 config.json 不存在。预期的位置是: {config_path}")
+    
     with open(config_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
@@ -167,15 +171,27 @@ def process_batch_concurrently(image_tasks: list, cache_dir: Path, smart_merge: 
         # 2. 获取数据 
         data_uri = task["get_data_uri"]()
         print(f"⏳ 正在识别 {idx+1}/{total} ({label})...")
-        res = call_ocr_api_with_data(data_uri, label)
-        md_text = clean_markdown_text(res.get("md_results", ""))
-        usage = res.get("usage", {})
-        
-        # 3. 持久化
-        with open(cache_file, 'w', encoding='utf-8') as f:
-            json.dump({"md_text": md_text, "usage": usage}, f, ensure_ascii=False)
+        try:
+            res = call_ocr_api_with_data(data_uri, label)
+            md_results = res.get("md_results", "")
+            md_text = clean_markdown_text(md_results)
             
-        return idx, md_text, usage
+            if not md_text.strip():
+                print(f"⚠️  警告: 第 {idx+1} 页 ({label}) 识别结果为空。可能是页面空白或智谱无法解析该版面。")
+            
+            usage = res.get("usage", {})
+            
+            # 3. 持久化
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump({"md_text": md_text, "usage": usage}, f, ensure_ascii=False)
+                
+            return idx, md_text, usage
+        except Exception as e:
+            # 针对 500 等错误给出更明确的提示
+            err_msg = str(e)
+            if "500" in err_msg:
+                print(f"❌ 第 {idx+1} 页 ({label}) 识别报错 (500): 服务端处理失败，通常是由于页面内容过于复杂或为空白导致。")
+            raise e
 
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENCY) as executor:
         future_to_task = {executor.submit(process_task, task): task for task in image_tasks}
